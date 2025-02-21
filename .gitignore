@@ -1,0 +1,41 @@
+# Node.js dependencies
+node_modules/
+
+# Log files
+logs/
+*.log
+
+# Database files
+db.sqlite
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+
+# Build files
+build/
+dist/
+
+# Config files
+config.json
+.env
+
+# Test files
+tests/
+test/
+
+# Coverage files
+coverage/
+
+# Documentation files
+docs/
+
+# Miscellaneous files
+*.tmp
+*.bak
+*.swp
+*.swo
