@@ -1,47 +1,53 @@
-require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
-
-const db = require("./config/db");
+const initializeDatabase = require("./config/db"); // Import the async database initialization function
 const userRoutes = require("./routes/userRoutes");
-const errorHandler = require("./middlewares/errorHandler");
 const CustomError = require("./utils/customError");
+const errorHandler = require("./middlewares/errorHandler");
 
 const app = express();
 
-// ✅ Middleware
-app.use(express.json()); // Parse JSON request body
-app.use(express.urlencoded({ extended: true })); // Parse URL-encoded data
-app.use(cors()); // Enable CORS
-app.use(helmet()); // Security headers
-app.use(morgan("dev")); // Logging
+// ✅ Middleware (Runs Before Routes)
+app.use(express.json());
+app.use(cors());
+app.use(helmet());
+// app.use(morgan("dev"));
 
-// ✅ Database Connection & Server Initialization
-const PORT = process.env.PORT || 5000;
+// ✅ Database Connection
+async function runMigrations() {
+  try {
+    // Get the sequelize instance after the promise resolves
+    const sequelize = await initializeDatabase(); // Await the promise to resolve
 
-db.sync()
-  .then(() => {
-    console.log("✅ Database synced successfully!");
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
+    console.log("✅ Database connection established.");
+
+    // Sync models
+    await sequelize.sync(); // Ensure this is awaited before starting the server
+    console.log("✅ Models synchronized.");
+
+    // Start server
+    app.listen(5000, () => {
+      console.log("🚀 Server started on port 5000");
     });
-  })
-  .catch((err) => {
-    console.error("❌ Error syncing database:", err);
-    process.exit(1); // Exit process if DB connection fails
-  });
+  } catch (error) {
+    console.error("❌ Error during migrations:", error);
+    process.exit(1); // Exit if there are errors
+  }
+}
 
-// ✅ Routes
+runMigrations();
+
+// ✅ API Routes
 app.use("/api/users", userRoutes);
 
-// ✅ Handle Undefined Routes (404)
+// ✅ Handle Undefined Routes (404) - MUST BE AFTER ROUTES
 app.use((req, res, next) => {
   next(new CustomError("ROUTE_NOT_FOUND"));
 });
 
-// ✅ Centralized Error Handling Middleware
+// ✅ Global Error Handler - MUST BE LAST
 app.use(errorHandler);
 
 module.exports = app;
