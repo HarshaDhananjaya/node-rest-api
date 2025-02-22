@@ -23,8 +23,13 @@ async function initializeDatabase() {
     console.log("✅ MySQL connection established.");
 
     // 2️⃣ Create the database if it does not exist
-    await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\`;`);
-    console.log(`✅ Database '${dbName}' is ready.`);
+    const result = await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\`;`);
+    if (result.warningCount === 0) {
+      console.log(`✅ Database '${dbName}' created successfully.`);
+    } else {
+      console.log(`✅ Database '${dbName}' already exists.`);
+    }
+
     await connection.end();
 
     // 3️⃣ Initialize Sequelize **AFTER database creation**

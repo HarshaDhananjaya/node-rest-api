@@ -6,6 +6,9 @@
     "dev": "nodemon src/app.js",
     "start": "node src/app.js",
     "migrate": "sequelize db:migrate",
+    "rollback": "sequelize db:migrate:undo:all",
+    "seed": "sequelize db:seed:all",
+    "seed:undo": "sequelize db:seed:undo:all",
     "dev:migrate": "npm-run-all migrate dev",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

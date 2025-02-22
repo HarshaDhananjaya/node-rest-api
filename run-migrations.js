@@ -1,11 +1,8 @@
-const { Sequelize } = require("sequelize");
-const initializeDatabase = require("./src/config/db");
 const { exec } = require("child_process");
 
 async function runMigrations() {
   try {
-    const sequelize = await initializeDatabase;
-    console.log("✅ Database connection established.");
+    console.log("⏳ Running migrations...");
 
     // Run Sequelize CLI migration
     exec("npx sequelize db:migrate", (error, stdout, stderr) => {
@@ -17,6 +14,16 @@ async function runMigrations() {
         console.error(`❌ Migration stderr: ${stderr}`);
       }
       console.log(`✅ Migration output: \n${stdout}`);
+
+      // Run seed after migration
+      exec("npx sequelize db:seed:all", (seedError, seedStdout, seedStderr) => {
+        if (seedError) {
+          console.error(`❌ Seed error: ${seedError.message}`);
+          process.exit(1);
+        }
+        if (seedStderr) console.error(`⚠️ Seed stderr: ${seedStderr}`);
+        console.log(`✅ Seed output: \n${seedStdout}`);
+      });
     });
   } catch (error) {
     console.error("❌ Error running migrations:", error);
@@ -25,4 +32,4 @@ async function runMigrations() {
 }
 
 // Run migrations
-runMigrations();
+module.exports = runMigrations;
