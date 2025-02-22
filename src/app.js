@@ -3,9 +3,9 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
-const initializeDatabase = require("./config/db"); // Ensure DB is ready before starting
+const initializeDatabase = require("./config/db");
+const { exec } = require("child_process");
 const userRoutes = require("./routes/userRoutes");
-
 const app = express();
 
 // ✅ Middleware
@@ -14,19 +14,24 @@ app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));
 
-// ✅ Database Initialization & Migrations
 async function startServer() {
   try {
-    // Step 1️⃣: Ensure database exists & get Sequelize instance
-    const sequelize = await initializeDatabase();
+    console.log("⏳ Ensuring database is created...");
+    const sequelize = await initializeDatabase(); // ✅ Step 1: Create database
 
-    // Step 2️⃣: Run migrations before starting server
-    await sequelize.sync(); // If using Sequelize CLI migrations, use `npx sequelize db:migrate`
-    console.log("✅ Database synchronized.");
+    console.log("⏳ Running migrations...");
+    exec("npx sequelize db:migrate", async (error, stdout, stderr) => {
+      if (error) {
+        console.error(`❌ Migration error: ${error.message}`);
+        process.exit(1);
+      }
+      if (stderr) console.error(`⚠️ Migration warning: ${stderr}`);
+      console.log(stdout);
 
-    // Step 3️⃣: Start the Express server
-    app.listen(5000, () => {
-      console.log("🚀 Server running on port 5000");
+      console.log("✅ Migrations completed. Starting server...");
+      app.listen(5000, () => {
+        console.log("🚀 Server running on port 5000");
+      });
     });
   } catch (error) {
     console.error("❌ Failed to start server:", error);

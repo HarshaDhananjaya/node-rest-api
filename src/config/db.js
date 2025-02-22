@@ -12,7 +12,7 @@ async function initializeDatabase() {
   try {
     console.log("⏳ Connecting to MySQL server...");
 
-    // Connect to MySQL without specifying database
+    // 1️⃣ Create a connection **without specifying the database**
     const connection = await mysql.createConnection({
       host: dbHost,
       user: dbUser,
@@ -22,13 +22,12 @@ async function initializeDatabase() {
 
     console.log("✅ MySQL connection established.");
 
-    // Create the database if it does not exist
+    // 2️⃣ Create the database if it does not exist
     await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\`;`);
-    console.log(`✅ Database '${dbName}' ensured.`);
-
+    console.log(`✅ Database '${dbName}' is ready.`);
     await connection.end();
 
-    // Initialize Sequelize after DB creation
+    // 3️⃣ Initialize Sequelize **AFTER database creation**
     const sequelize = new Sequelize(dbName, dbUser, dbPass, {
       host: dbHost,
       dialect: "mysql",
@@ -37,15 +36,13 @@ async function initializeDatabase() {
     });
 
     await sequelize.authenticate();
-    console.log("✅ MySQL Connected...");
-
-    return sequelize;
+    console.log("✅ Sequelize initialized.");
+    return sequelize; // ✅ Return Sequelize instance
   } catch (err) {
     console.error(`❌ Error initializing database: ${err.message}`);
     process.exit(1);
   }
 }
 
-// Ensure the function runs and returns a Sequelize instance
-const sequelizeInstance = initializeDatabase();
-module.exports = sequelizeInstance;
+// ✅ Export a function that resolves to a Sequelize instance
+module.exports = initializeDatabase;
