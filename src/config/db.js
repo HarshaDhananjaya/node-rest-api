@@ -1,4 +1,3 @@
-// db.js
 const mysql = require("mysql2/promise");
 const { Sequelize } = require("sequelize");
 require("dotenv").config();
@@ -13,7 +12,7 @@ async function initializeDatabase() {
   try {
     console.log("⏳ Connecting to MySQL server...");
 
-    // 1️⃣ Create a connection to MySQL **without specifying the database**
+    // Connect to MySQL without specifying database
     const connection = await mysql.createConnection({
       host: dbHost,
       user: dbUser,
@@ -23,33 +22,30 @@ async function initializeDatabase() {
 
     console.log("✅ MySQL connection established.");
 
-    // 2️⃣ Create the database if it does not exist
-    const result = await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\`;`);
-    if (result[0].warningStatus === 0) {
-      console.log(`✅ Database '${dbName}' created successfully.`);
-    } else {
-      console.log(`✅ Database '${dbName}' already exists.`);
-    }
+    // Create the database if it does not exist
+    await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\`;`);
+    console.log(`✅ Database '${dbName}' ensured.`);
+
     await connection.end();
 
-    // 3️⃣ Now initialize Sequelize **AFTER** the database is created
+    // Initialize Sequelize after DB creation
     const sequelize = new Sequelize(dbName, dbUser, dbPass, {
       host: dbHost,
       dialect: "mysql",
       port: dbPort,
-      logging: console.log, // Enable logs for debugging
+      logging: false, // Disable logs for cleaner output
     });
 
     await sequelize.authenticate();
     console.log("✅ MySQL Connected...");
 
-    // Ensure you're exporting the Sequelize instance
-    return sequelize; // Return the sequelize instance
+    return sequelize;
   } catch (err) {
     console.error(`❌ Error initializing database: ${err.message}`);
-    process.exit(1); // Exit if DB initialization fails
+    process.exit(1);
   }
 }
 
-// Export the initialized Sequelize instance, wrapped in a promise
-module.exports = initializeDatabase;
+// Ensure the function runs and returns a Sequelize instance
+const sequelizeInstance = initializeDatabase();
+module.exports = sequelizeInstance;

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "dev": "node src/app.js",
+    "dev": "node run-migrations.js && nodemon src/app.js",
     "start": "node src/app.js",
     "migrate": "sequelize db:migrate",
     "dev:migrate": "npm-run-all migrate dev",
