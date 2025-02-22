@@ -6,7 +6,7 @@ module.exports = {
     const seedRecord = await queryInterface.rawSelect("sequelizeSeedMeta", { where: { name: seedName } }, ["id"]);
 
     if (seedRecord) {
-      console.log(`⚠️Seed "${seedName}" has already been applied. Skipping...`);
+      console.log(`⚠️ Seed "${seedName}" has already been applied. Skipping...`);
       return; // If the seed is already applied, skip it
     }
 
