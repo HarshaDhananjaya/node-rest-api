@@ -1,38 +1,32 @@
 const { DataTypes } = require("sequelize");
-const initializeDatabase = require("../config/db"); // Import the async database initialization function
+const { sequelize } = require("../config/db"); // ✅ Import the initialized Sequelize instance
 
-async function getUserModel() {
-  const sequelize = await initializeDatabase(); // Ensure the sequelize instance is available
-
-  // Define the User model
-  const User = sequelize.define(
-    "User",
-    {
-      id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-      },
-      name: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      email: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true,
-      },
-      password: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
+// Define the User model **ONCE**
+const User = sequelize.define(
+  "User",
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
     },
-    {
-      timestamps: true, // Automatically manage createdAt and updatedAt fields
-    }
-  );
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+    },
+    password: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+  },
+  {
+    timestamps: true, // Automatically adds createdAt & updatedAt
+  }
+);
 
-  return User;
-}
-
-module.exports = getUserModel;
+module.exports = User; // ✅ Export the model directly

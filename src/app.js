@@ -3,7 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
-const initializeDatabase = require("./config/db");
+const { connectDatabase } = require("./config/db");
 const userRoutes = require("./routes/userRoutes");
 const runMigrations = require("./../run-migrations"); // Import the migration script
 const app = express();
@@ -17,7 +17,7 @@ app.use(morgan("dev"));
 async function startServer() {
   try {
     console.log("⏳ Ensuring database is created...");
-    await initializeDatabase(); // ✅ Step 1: Create database
+    await connectDatabase(); // ✅ Step 1: Create database
     await runMigrations(); // ✅ Step 2: Run migrations
 
     app.listen(5000, () => {

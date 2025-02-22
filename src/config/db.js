@@ -8,11 +8,11 @@ const dbPass = process.env.MYSQL_PASSWORD;
 const dbHost = process.env.MYSQL_HOST;
 const dbPort = process.env.MYSQL_PORT;
 
-async function initializeDatabase() {
+async function ensureDatabaseExists() {
   try {
-    console.log("⏳ Connecting to MySQL server...");
+    console.log("⏳ Checking database existence...");
 
-    // 1️⃣ Create a connection **without specifying the database**
+    // Create a connection **without specifying the database**
     const connection = await mysql.createConnection({
       host: dbHost,
       user: dbUser,
@@ -20,34 +20,35 @@ async function initializeDatabase() {
       port: dbPort,
     });
 
-    console.log("✅ MySQL connection established.");
-
-    // 2️⃣ Create the database if it does not exist
-    const result = await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\`;`);
-    if (result.warningCount === 0) {
-      console.log(`✅ Database '${dbName}' created successfully.`);
-    } else {
-      console.log(`✅ Database '${dbName}' already exists.`);
-    }
+    // Create the database if it does not exist
+    await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\`;`);
+    console.log(`✅ Database '${dbName}' is ready.`);
 
     await connection.end();
-
-    // 3️⃣ Initialize Sequelize **AFTER database creation**
-    const sequelize = new Sequelize(dbName, dbUser, dbPass, {
-      host: dbHost,
-      dialect: "mysql",
-      port: dbPort,
-      logging: false, // Disable logs for cleaner output
-    });
-
-    await sequelize.authenticate();
-    console.log("✅ Sequelize initialized.");
-    return sequelize; // ✅ Return Sequelize instance
-  } catch (err) {
-    console.error(`❌ Error initializing database: ${err.message}`);
+  } catch (error) {
+    console.error(`❌ Error ensuring database exists: ${error.message}`);
     process.exit(1);
   }
 }
 
-// ✅ Export a function that resolves to a Sequelize instance
-module.exports = initializeDatabase;
+// Initialize Sequelize AFTER ensuring the database exists
+const sequelize = new Sequelize(dbName, dbUser, dbPass, {
+  host: dbHost,
+  dialect: "mysql",
+  port: dbPort,
+  logging: false,
+});
+
+// Function to connect to the database
+async function connectDatabase() {
+  await ensureDatabaseExists(); // ✅ Ensure DB exists first
+  try {
+    await sequelize.authenticate();
+    console.log("✅ Database connected successfully.");
+  } catch (error) {
+    console.error("❌ Database connection failed:", error);
+    process.exit(1);
+  }
+}
+
+module.exports = { sequelize, connectDatabase };
