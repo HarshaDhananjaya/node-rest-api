@@ -5,7 +5,7 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const { connectDatabase } = require("./config/db");
 const userRoutes = require("./routes/userRoutes");
-const runMigrations = require("./../run-migrations"); // Import the migration script
+const runMigrations = require("./migrations"); // Import the migration script
 const CustomError = require("./utils/customError");
 const errorHandler = require("./middlewares/errorHandler");
 
