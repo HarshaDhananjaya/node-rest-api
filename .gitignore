@@ -28,6 +28,12 @@ config.json
 tests/
 test/
 
+# Sonar files
+.scannerwork/
+
+# Test results
+test-results
+
 # Coverage files
 coverage/
 
