@@ -21,7 +21,6 @@ build/
 dist/
 
 # Config files
-config.json
 .env
 
 # Test files
