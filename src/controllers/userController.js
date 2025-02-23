@@ -1,7 +1,7 @@
 const userService = require("../services/userService");
 const CustomError = require("../utils/customError");
 
-const getUsers = async (req, res, next) => {
+const getAllUsers = async (req, res, next) => {
   try {
     const users = await userService.getAllUsers();
     res.status(200).json(users);
@@ -10,7 +10,7 @@ const getUsers = async (req, res, next) => {
   }
 };
 
-const getUser = async (req, res, next) => {
+const getUserById = async (req, res, next) => {
   try {
     const user = await userService.getUserById(req.params.id);
     if (!user) return next(new CustomError("USER_NOT_FOUND"));
@@ -49,4 +49,4 @@ const deleteUser = async (req, res, next) => {
   }
 };
 
-module.exports = { getUsers, getUser, createUser, updateUser, deleteUser };
+module.exports = { getAllUsers, getUserById, createUser, updateUser, deleteUser };
