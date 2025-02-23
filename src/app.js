@@ -11,7 +11,7 @@ const morgan = require("morgan");
 const userRoutes = require("./routes/userRoutes");
 const CustomError = require("./utils/customError");
 const errorHandler = require("./middlewares/errorHandler");
-const { logWithRequestMetadata } = require("./logger");
+const { attachLogMetadata } = require("./logger");
 
 // Create Express app
 const app = express();
@@ -23,30 +23,7 @@ app.use(helmet());
 app.use(morgan("dev"));
 
 // Middleware for logging requests
-app.use((req, res, next) => {
-  const start = Date.now(); // Track request start time
-  const uuid = req.headers["x-request-id"] || "N/A"; // Get UUID from header (fallback to N/A)
-
-  // Attach metadata to the request object
-  req.logMetadata = {
-    ip: req.ip || "N/A",
-    uuid: uuid,
-    method: req.method,
-    endpoint: req.originalUrl,
-    startTime: start, // Store the request start time
-  };
-
-  // Handle the 'finish' event when the response has been sent
-  res.on("finish", () => {
-    const duration = Date.now() - start; // Calculate the request duration
-    req.logMetadata.duration = `${duration}`; // Add duration to metadata
-
-    // Use the helper to log the metadata
-    logWithRequestMetadata(req, "Request processed");
-  });
-
-  next(); // Pass control to the next middleware or route handler
-});
+app.use(attachLogMetadata);
 
 // API Routes
 app.use("/api/users", userRoutes);

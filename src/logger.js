@@ -1,54 +1,127 @@
 const winston = require("winston");
 const DailyRotateFile = require("winston-daily-rotate-file");
+const { AsyncLocalStorage } = require("async_hooks");
 
-// Define the log file transport (daily rotating logs)
-const transport = new DailyRotateFile({
-  filename: "logs/app-%DATE%.log",
+// **Global storage for request metadata**
+const asyncLocalStorage = new AsyncLocalStorage();
+
+// **Rotating log file transports**
+const requestTransport = new DailyRotateFile({
+  filename: "logs/requests-%DATE%.log",
   datePattern: "YYYY-MM-DD",
-  maxSize: "10m", // Max file size 10MB
-  maxFiles: "14d", // Keep logs for 14 days
-  zippedArchive: true, // Compress old logs
+  maxSize: "10m",
+  maxFiles: "14d",
+  zippedArchive: true,
 });
 
-// Redact sensitive fields like password, token, apiKey
-const redactedFields = ["password", "token", "apiKey"];
+const activityTransport = new DailyRotateFile({
+  filename: "logs/activity-%DATE%.log",
+  datePattern: "YYYY-MM-DD",
+  maxSize: "10m",
+  maxFiles: "14d",
+  zippedArchive: true,
+});
 
-// Mask sensitive data in logs
+// Mask sensitive fields
+const redactedFields = ["password", "token", "apiKey"];
 const maskSensitiveFields = winston.format((info) => {
-  if (typeof info.message === "object") {
+  if (typeof info.metadata === "object") {
     redactedFields.forEach((field) => {
-      if (info.message[field]) {
-        info.message[field] = "******"; // Mask sensitive fields
+      if (info.metadata.body && info.metadata.body[field]) {
+        info.metadata.body[field] = "******";
       }
     });
   }
   return info;
 });
 
-// Winston logger configuration
-const logger = winston.createLogger({
-  level: "info",
-  format: winston.format.combine(
-    maskSensitiveFields(), // Redact sensitive fields
-    winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
-    winston.format.metadata({ fillExcept: ["timestamp", "level", "message"] }), // Include metadata automatically
-    winston.format.printf(({ timestamp, level, message, metadata }) => {
-      const { ip = "N/A", uuid = "N/A", duration = "N/A", method = "N/A", endpoint = "N/A" } = metadata.metadata || {};
-      return `${timestamp} | | ${level} | ${ip} | ${uuid} | ${duration}ms | ${method} | ${endpoint} | ${message}`;
-    })
-  ),
-  transports: [
-    new winston.transports.Console(), // Console logging
-    transport, // File transport
-  ],
+// **Request-Response Logger Format**
+const requestLogFormat = winston.format.printf(({ timestamp, level, message, metadata }) => {
+  const {
+    ip = "N/A",
+    uuid = "N/A",
+    duration = "N/A",
+    method = "N/A",
+    endpoint = "N/A",
+    status = "N/A",
+    query = {},
+    body = {},
+    response = "N/A",
+  } = metadata || {};
+  return `${timestamp} | ${level.toUpperCase()} | ${ip} | ${uuid} | ${duration}ms | ${method} | ${endpoint} | Status: ${status} | Query: ${JSON.stringify(
+    query
+  )} | Body: ${JSON.stringify(body)} | Response: ${JSON.stringify(response)} | ${message}`;
 });
 
-// Helper to log with consistent metadata from the request
-const logWithRequestMetadata = (req, message) => {
-  console.log(req.logMetadata);
-  logger.info(message, {
-    metadata: req.logMetadata, // Attach the request's logMetadata
+// **Activity Logger Format with Combined Metadata**
+const activityLogFormat = winston.format.printf(({ timestamp, level, message, metadata }) => {
+  const { ip, uuid, method, endpoint } = metadata?.metadata || {};
+  const logPart = `${timestamp} | ${level.toUpperCase()} | ${ip} | ${uuid} | ${method} | ${endpoint}`;
+  return `${logPart} | ${message}`;
+});
+
+// **Request Logger**
+const requestLogger = winston.createLogger({
+  level: "info",
+  format: winston.format.combine(
+    maskSensitiveFields(),
+    winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
+    winston.format.metadata({ fillExcept: ["timestamp", "level", "message"] }),
+    requestLogFormat
+  ),
+  transports: [new winston.transports.Console(), requestTransport],
+});
+
+// **Activity Logger**
+const activityLogger = winston.createLogger({
+  level: "info",
+  format: winston.format.combine(
+    maskSensitiveFields(),
+    winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
+    winston.format.metadata({ fillExcept: ["timestamp", "level", "message"] }),
+    activityLogFormat
+  ),
+  transports: [new winston.transports.Console(), activityTransport],
+});
+
+// **Middleware to attach request metadata using AsyncLocalStorage**
+const attachLogMetadata = (req, res, next) => {
+  // console.log(req);
+  console.log(res);
+  const requestMetadata = {
+    ip: req.ip || "N/A",
+    uuid: req.headers["x-request-id"] || "N/A",
+    method: req.method,
+    endpoint: req.originalUrl,
+    query: req.query,
+    body: { ...req.body },
+    startTime: Date.now(),
+  };
+
+  // Store metadata in AsyncLocalStorage
+  asyncLocalStorage.run(requestMetadata, () => {
+    res.on("finish", () => {
+      requestMetadata.duration = Date.now() - requestMetadata.startTime;
+      requestMetadata.status = res.statusCode;
+      requestMetadata.response = res.locals.response || "N/A";
+
+      // Automatically log request-response details
+      requestLogger.info("Request processed", requestMetadata);
+    });
+
+    next();
   });
 };
 
-module.exports = { logger, logWithRequestMetadata };
+// **Updated logActivity function (No req parameter required)**
+const logActivity = (level, message) => {
+  const metadata = asyncLocalStorage.getStore() || { warning: "No request metadata available" };
+
+  activityLogger.log({
+    level,
+    message,
+    metadata,
+  });
+};
+
+module.exports = { requestLogger, activityLogger, attachLogMetadata, logActivity };
