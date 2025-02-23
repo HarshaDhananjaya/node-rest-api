@@ -1,6 +1,6 @@
 const userService = require("../services/userService");
 const CustomError = require("../utils/customError");
-const logger = require("../../logger");
+const { logWithRequestMetadata, logger } = require("../logger");
 
 const getAllUsers = async (req, res, next) => {
   try {
@@ -18,10 +18,10 @@ const getUserById = async (req, res, next) => {
 
     if (!user) return next(new CustomError("USER_NOT_FOUND"));
 
-    logger.info(`Fetching user with ID: ${userId}`);
+    logWithRequestMetadata(req, `Fetching user with ID: ${userId}`);
     res.status(200).json(user);
   } catch (error) {
-    logger.error(`Fetching user with ID: ${userId}`);
+    logWithRequestMetadata(req, `Fetching user with ID: ${userId}`);
     next(error);
   }
 };

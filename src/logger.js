@@ -1,6 +1,7 @@
 const winston = require("winston");
 const DailyRotateFile = require("winston-daily-rotate-file");
 
+// Define the log file transport (daily rotating logs)
 const transport = new DailyRotateFile({
   filename: "logs/app-%DATE%.log",
   datePattern: "YYYY-MM-DD",
@@ -9,14 +10,15 @@ const transport = new DailyRotateFile({
   zippedArchive: true, // Compress old logs
 });
 
+// Redact sensitive fields like password, token, apiKey
 const redactedFields = ["password", "token", "apiKey"];
 
-// Create custom format to mask sensitive data
+// Mask sensitive data in logs
 const maskSensitiveFields = winston.format((info) => {
   if (typeof info.message === "object") {
     redactedFields.forEach((field) => {
       if (info.message[field]) {
-        info.message[field] = "******";
+        info.message[field] = "******"; // Mask sensitive fields
       }
     });
   }
@@ -27,11 +29,26 @@ const maskSensitiveFields = winston.format((info) => {
 const logger = winston.createLogger({
   level: "info",
   format: winston.format.combine(
-    maskSensitiveFields(), // Redact JSON fields
+    maskSensitiveFields(), // Redact sensitive fields
     winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
-    winston.format.printf(({ timestamp, level, message }) => `${timestamp} [${level.toUpperCase()}]: ${message}`)
+    winston.format.metadata({ fillExcept: ["timestamp", "level", "message"] }), // Include metadata automatically
+    winston.format.printf(({ timestamp, level, message, metadata }) => {
+      const { ip = "N/A", uuid = "N/A", duration = "N/A", method = "N/A", endpoint = "N/A" } = metadata.metadata || {};
+      return `${timestamp} | | ${level} | ${ip} | ${uuid} | ${duration}ms | ${method} | ${endpoint} | ${message}`;
+    })
   ),
-  transports: [transport],
+  transports: [
+    new winston.transports.Console(), // Console logging
+    transport, // File transport
+  ],
 });
 
-module.exports = logger;
+// Helper to log with consistent metadata from the request
+const logWithRequestMetadata = (req, message) => {
+  console.log(req.logMetadata);
+  logger.info(message, {
+    metadata: req.logMetadata, // Attach the request's logMetadata
+  });
+};
+
+module.exports = { logger, logWithRequestMetadata };

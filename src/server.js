@@ -1,7 +1,6 @@
 const app = require("./app"); // Import app.js
 const { connectDatabase } = require("./config/db");
 const runMigrations = require("./migrations");
-const logger = require("./logger");
 
 const PORT = process.env.PORT || 5000;
 
